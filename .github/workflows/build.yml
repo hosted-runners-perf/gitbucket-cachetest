@@ -1,39 +1,25 @@
 name: build
 
-on: [push, pull_request]
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/20 * * * *"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      matrix:
-        java: [8, 11, 17]
     steps:
     - uses: actions/checkout@v3
-    - name: Cache
-      uses: actions/cache@v3
-      env:
-        cache-name: cache-sbt-libs
-      with:
-        path: |
-          ~/.ivy2/cache
-          ~/.sbt
-          ~/.cache/coursier/v1
-        key: build-${{ env.cache-name }}-${{ hashFiles('build.sbt') }}
     - name: Set up JDK
       uses: actions/setup-java@v3
       with:
-        java-version: ${{ matrix.java }}
+        java-version: 11
         distribution: adopt
+        cache: sbt
     - name: Run tests
       run: sbt scalafmtSbtCheck scalafmtCheck test:scalafmtCheck test
     - name: Scala 3
       run: sbt '++ 3.1.2!' update # TODO
     - name: Build executable
       run: sbt executable
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: gitbucket-java${{ matrix.java }}-${{ github.sha }}
-        path: ./target/executable/gitbucket.*
